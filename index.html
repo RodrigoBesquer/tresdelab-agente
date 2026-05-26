@@ -119,6 +119,23 @@ body{padding:0;}
 .post-badge{font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;background:rgba(59,130,246,.15);color:var(--blue);white-space:nowrap;flex-shrink:0;margin-top:2px;text-transform:uppercase;letter-spacing:.5px;}
 .post-text{font-size:12px;color:#bbb;line-height:1.5;}
 
+/* CONTENT SECTION */
+.content-section{background:var(--card);border:1px solid rgba(236,72,153,.2);border-radius:var(--radius);padding:20px;margin-bottom:14px;}
+.content-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;}
+.content-tabs{display:flex;gap:6px;flex-wrap:wrap;}
+.ctab{background:var(--card2);border:1px solid var(--border);color:var(--text2);font-family:'Inter',sans-serif;font-size:11px;font-weight:600;padding:5px 12px;border-radius:20px;cursor:pointer;transition:all .2s;}
+.ctab:hover{border-color:#555;color:var(--text);}
+.ctab.active{background:rgba(236,72,153,.15);border-color:rgba(236,72,153,.4);color:#f472b6;}
+.content-form{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;}
+.content-btn{background:#db2777;color:#fff;border:none;font-family:'Inter',sans-serif;font-weight:700;font-size:12px;padding:10px 18px;border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;gap:7px;transition:all .2s;white-space:nowrap;align-self:flex-end;}
+.content-btn:hover{background:#be185d;transform:translateY(-1px);}
+.content-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.content-output{font-size:13px;color:#ccc;line-height:1.8;white-space:pre-wrap;}
+.content-output h4{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#f472b6;margin:14px 0 6px;}
+.content-output .scene{background:var(--card2);border-left:2px solid #ec4899;padding:10px 14px;border-radius:0 var(--radius-sm) var(--radius-sm) 0;margin-bottom:8px;font-size:12px;}
+.content-output .caption-box{background:var(--card2);border:1px solid var(--border);padding:14px;border-radius:var(--radius-sm);font-size:13px;line-height:1.8;}
+.content-output .tip{background:rgba(236,72,153,.07);border:1px solid rgba(236,72,153,.2);padding:10px 14px;border-radius:var(--radius-sm);font-size:12px;margin-top:8px;}
+
 /* CALCULATOR */
 .calc-card{background:var(--card);border:1px solid rgba(139,92,246,.25);border-radius:var(--radius);padding:20px;margin-bottom:14px;}
 .calc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px;}
@@ -158,6 +175,9 @@ body{padding:0;}
   .grid-2,.tasks-split,.prod-grid,.calc-grid,.calc-opts,.result-grid{grid-template-columns:1fr;}
   .socios-row{flex-direction:column;}
   .topbar-date{display:none;}
+  .content-header{flex-direction:column;align-items:flex-start;}
+  .content-form{flex-direction:column;}
+  .content-btn{width:100%;}
 }
 </style>
 </head>
@@ -250,6 +270,47 @@ body{padding:0;}
       </div>
     </div>
 
+    <!-- CONTEÚDO -->
+    <div class="content-section">
+      <div class="content-header">
+        <div class="card-header" style="margin-bottom:0">
+          <div class="card-dot" style="background:#ec4899"></div>
+          <span class="card-title">Criação de conteúdo · seu painel</span>
+        </div>
+        <div class="content-tabs">
+          <button class="ctab active" onclick="setTab('reels')" id="tab-reels">Reels</button>
+          <button class="ctab" onclick="setTab('caption')" id="tab-caption">Caption</button>
+          <button class="ctab" onclick="setTab('script')" id="tab-script">Roteiro</button>
+          <button class="ctab" onclick="setTab('briefing')" id="tab-briefing">Como filmar</button>
+        </div>
+      </div>
+
+      <div class="content-form">
+        <div class="calc-field" style="flex:1">
+          <label class="calc-label">sobre o que é o conteúdo</label>
+          <input type="text" id="content-tema" class="calc-input" placeholder="ex: caixinha organizadora de figurinhas da Copa">
+        </div>
+        <div class="calc-field" style="width:160px">
+          <label class="calc-label">tom</label>
+          <select id="content-tom" class="calc-input">
+            <option value="descontraido">Descontraído</option>
+            <option value="informativo">Informativo</option>
+            <option value="urgente">Urgência / oferta</option>
+            <option value="bastidores">Bastidores</option>
+          </select>
+        </div>
+        <button class="content-btn" onclick="gerarConteudo()" id="content-btn">
+          <div class="spinner" id="content-spinner"></div>
+          <span id="content-btn-txt">Gerar conteúdo</span>
+        </button>
+      </div>
+
+      <div id="content-result" style="display:none">
+        <div class="calc-divider"></div>
+        <div id="content-output" class="content-output"></div>
+      </div>
+    </div>
+
     <!-- CALCULADORA -->
     <div class="calc-card">
       <div class="card-header"><div class="card-dot" style="background:var(--purple)"></div><span class="card-title">Calculadora de Impressão</span></div>
@@ -317,7 +378,7 @@ body{padding:0;}
 </div>
 
 <script>
-const BACKEND_URL = 'https://tresdelab-backend.vercel.app'; // ex: https://tresdelab-backend.vercel.app
+const BACKEND_URL = 'COLE_SUA_URL_VERCEL_AQUI'; // ex: https://tresdelab-backend.vercel.app
 const SPRINT_START = new Date('2026-05-26');
 const SPRINT_DAYS = 15;
 const KEY_STORAGE = 'tresdelab_apikey';
@@ -634,6 +695,154 @@ Forneça uma análise curta (5-7 linhas) com: (1) se o preço está competitivo 
   btn.disabled = false;
   spinner.style.display = 'none';
   txt.textContent = 'Calcular + análise IA';
+}
+
+
+/* ---- CONTENT CREATOR ---- */
+let currentTab = 'reels';
+
+function setTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.ctab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('content-result').style.display = 'none';
+}
+
+const tabPrompts = {
+  reels: (tema, tom, ctx) => `Você é especialista em marketing digital para pequenas empresas de impressão 3D no Brasil.
+Crie um roteiro completo de Reels para Instagram sobre: "${tema}"
+Tom: ${tom}
+Contexto: ${ctx}
+Formato da resposta (use exatamente estes títulos):
+
+GANCHO (0-3s)
+[texto na tela e o que fazer/falar — máx 2 linhas]
+
+CENA 1 (3-8s)
+[o que mostrar e o que falar]
+
+CENA 2 (8-15s)
+[o que mostrar e o que falar]
+
+CENA 3 (15-25s)
+[o que mostrar e o que falar]
+
+CTA FINAL (25-30s)
+[chamada para ação clara]
+
+LEGENDA SUGERIDA
+[caption com emojis e hashtags]`,
+
+  caption: (tema, tom, ctx) => `Você é copywriter especialista em Instagram para pequenas empresas brasileiras de impressão 3D.
+Crie 3 opções de caption para Instagram sobre: "${tema}"
+Tom: ${tom}
+Contexto: ${ctx}
+
+Para cada opção use este formato:
+OPÇÃO 1 — [nome do estilo]
+[caption completa com emojis, quebras de linha naturais, hashtags no final]
+
+OPÇÃO 2 — [nome do estilo]
+[caption completa]
+
+OPÇÃO 3 — [nome do estilo]
+[caption completa]`,
+
+  script: (tema, tom, ctx) => `Você é roteirista especialista em vídeos curtos para Instagram de pequenas empresas brasileiras.
+Crie um roteiro de vídeo completo (30-60s) sobre: "${tema}"
+Tom: ${tom}
+Contexto: ${ctx}
+
+Use este formato:
+DURAÇÃO TOTAL: [X segundos]
+
+CENA 1 — [descrição da cena]
+Tempo: [X-Xs]
+O que mostrar: [descrição visual]
+O que falar: "[fala exata]"
+Texto na tela: [texto sobreposto]
+
+[repita para cada cena]
+
+MÚSICA SUGERIDA: [estilo/mood]
+HASHTAGS: [lista]`,
+
+  briefing: (tema, tom, ctx) => `Você é diretor de fotografia especialista em conteúdo para Instagram de pequenas empresas.
+Crie um briefing de filmagem para: "${tema}"
+Tom: ${tom}
+Contexto: ${ctx}
+
+Inclua:
+EQUIPAMENTO
+[o que usar — pode ser celular]
+
+ILUMINAÇÃO
+[como iluminar o produto/cena]
+
+ÂNGULOS
+[quais ângulos filmar e por quê]
+
+CENÁRIO
+[onde filmar, o que colocar no fundo]
+
+DICAS DE PRODUTO
+[como deixar o produto com melhor aparência]
+
+ERROS COMUNS
+[o que evitar]`
+};
+
+async function gerarConteudo() {
+  const tema = document.getElementById('content-tema').value.trim();
+  if (!tema) {
+    document.getElementById('content-tema').focus();
+    return;
+  }
+  const tom = document.getElementById('content-tom').value;
+  const btn = document.getElementById('content-btn');
+  const spinner = document.getElementById('content-spinner');
+  const txt = document.getElementById('content-btn-txt');
+
+  btn.disabled = true;
+  spinner.style.display = 'block';
+  txt.textContent = 'gerando...';
+
+  const restantes = window._restantes || 15;
+  const CONTEXT = `Empresa: Trêsde Lab — impressão 3D FDM (Creality Ender-3 V3 SE, PLA). Sprint Copa 2026. ${restantes} dias restantes para gerar caixa.`;
+
+  const tomLabel = {descontraido:'descontraído e divertido', informativo:'informativo e educativo', urgente:'urgência e oferta', bastidores:'bastidores e autêntico'}[tom] || tom;
+  const prompt = tabPrompts[currentTab](tema, tomLabel, CONTEXT);
+
+  try {
+    const res = await fetch(BACKEND_URL + '/api/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1200,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+
+    // Format output nicely
+    const formatted = text
+      .replace(/^(GANCHO|CENA \d+|CTA FINAL|LEGENDA SUGERIDA|OPÇÃO \d+[^\n]*|DURAÇÃO TOTAL|EQUIPAMENTO|ILUMINAÇÃO|ÂNGULOS|CENÁRIO|DICAS DE PRODUTO|ERROS COMUNS|MÚSICA SUGERIDA|HASHTAGS)/gm,
+        '<h4>$1</h4>')
+      .replace(/
+/g, '<br>');
+
+    document.getElementById('content-output').innerHTML = formatted;
+    document.getElementById('content-result').style.display = 'block';
+  } catch(e) {
+    document.getElementById('content-output').innerHTML = '<span style="color:var(--text3)">Erro ao gerar conteúdo. Tente novamente.</span>';
+    document.getElementById('content-result').style.display = 'block';
+  }
+
+  btn.disabled = false;
+  spinner.style.display = 'none';
+  txt.textContent = 'Gerar conteúdo';
 }
 
 
