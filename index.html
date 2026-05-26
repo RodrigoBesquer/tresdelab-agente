@@ -317,7 +317,7 @@ body{padding:0;}
 </div>
 
 <script>
-const BACKEND_URL = 'https://tresdelab-backend.vercel.app'; // ex: https://tresdelab-backend.vercel.app
+const BACKEND_URL = 'COLE_SUA_URL_VERCEL_AQUI'; // ex: https://tresdelab-backend.vercel.app
 const SPRINT_START = new Date('2026-05-26');
 const SPRINT_DAYS = 15;
 const KEY_STORAGE = 'tresdelab_apikey';
@@ -328,26 +328,15 @@ function init() {
   showApp();
 }
 
-function toggleVis() {
-  const inp = document.getElementById('api-key-input');
-  inp.type = inp.type === 'password' ? 'text' : 'password';
-}
-
-function saveKey() {
-  // Backend mode: no API key needed from user
-  showApp();
-}
+// Backend mode: no API key functions needed
 
 function changeKey() {
   // No-op in backend mode
 }
 
-document.getElementById('api-key-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') saveKey();
-});
+// backend mode: no api key input needed
 
 function showApp() {
-  document.getElementById('setup-screen').style.display = 'none';
   document.getElementById('app-screen').style.display = 'block';
 
   if (!localStorage.getItem(START_STORAGE)) localStorage.setItem(START_STORAGE, Date.now());
