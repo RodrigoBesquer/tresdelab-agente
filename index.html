@@ -985,8 +985,7 @@ async function gerarConteudo() {
     const formatted = text
       .replace(/^(GANCHO|CENA \d+|CTA FINAL|LEGENDA SUGERIDA|OPÇÃO \d+[^\n]*|DURAÇÃO TOTAL|EQUIPAMENTO|ILUMINAÇÃO|ÂNGULOS|CENÁRIO|DICAS DE PRODUTO|ERROS COMUNS|MÚSICA SUGERIDA|HASHTAGS)/gm,
         '<h4>$1</h4>')
-      .replace(/
-/g, '<br>');
+      .replace(/\n/g, '<br>');
 
     document.getElementById('content-output').innerHTML = formatted;
     document.getElementById('content-result').style.display = 'block';
