@@ -378,14 +378,15 @@ body{padding:0;}
 </div>
 
 <script>
-const BACKEND_URL = 'https://tresdelab-backend.vercel.app'; // ex: https://tresdelab-backend.vercel.app
+const BACKEND_URL = 'https://tresdelab-backend.vercel.app';
+const SUPABASE_URL = 'https://okgcrlqoqfrodgrkeufy.supabase.co';
+const SUPABASE_ANON = 'sb_publishable_zjYajJRUrkP2z0RF_stDfA_UQwhY4aT';
 const SPRINT_START = new Date('2026-05-26');
 const SPRINT_DAYS = 15;
 const KEY_STORAGE = 'tresdelab_apikey';
 const START_STORAGE = 'tresdelab_start';
 
 function init() {
-  // Backend mode: go straight to app
   showApp();
 }
 
@@ -399,7 +400,6 @@ function changeKey() {
 
 function showApp() {
   document.getElementById('app-screen').style.display = 'block';
-
   if (!localStorage.getItem(START_STORAGE)) localStorage.setItem(START_STORAGE, Date.now());
 
   const today = new Date();
@@ -417,6 +417,134 @@ function showApp() {
   window._sprintDay = sprintDay;
   window._restantes = restantes;
   window._today = today;
+
+  // Auto-load today's briefing from Supabase
+  loadTodayBriefing();
+}
+
+async function loadTodayBriefing() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/claude?action=load`);
+    const data = await res.json();
+
+    if (data.briefing) {
+      const b = data.briefing;
+      window._pendingRodrigo = data.pendingRodrigo || [];
+      window._pendingJean = data.pendingJean || [];
+
+      // Show foco
+      if (b.foco_do_dia) {
+        document.getElementById('foco-area').innerHTML = `<div class="foco-box"><div class="foco-dot"></div>Dia ${b.sprint_dia} · ${b.foco_do_dia}</div>`;
+      }
+
+      // Render tasks with pending from yesterday
+      const allR = [...(window._pendingRodrigo.map(t => ({...t, pendente: true}))), ...(b.tarefas_rodrigo || [])];
+      const allJ = [...(window._pendingJean.map(t => ({...t, pendente: true}))), ...(b.tarefas_jean || [])];
+      renderTasksFromDB(allR, allJ, data.statuses || [], b.sprint_dia);
+
+      // Mercado
+      if (b.mercado) {
+        document.getElementById('content-mercado').classList.remove('empty');
+        document.getElementById('content-mercado').innerHTML = `<p style="color:#ccc;line-height:1.7;font-size:12px">${b.mercado}</p>`;
+        document.getElementById('card-mercado').classList.add('loaded');
+      }
+
+      // Produtos
+      if (b.produtos) {
+        let html = `<div class="prod-grid">`;
+        b.produtos.forEach(p => {
+          const cor = p.potencial === 'alto' ? 'var(--accent-light)' : 'var(--gold)';
+          html += `<div class="prod-card"><div class="prod-name">${p.nome}</div><div class="prod-ticket" style="color:${cor}">${p.ticket}</div><div class="prod-tempo">${p.tempo_impressao}</div></div>`;
+        });
+        html += '</div>';
+        document.getElementById('content-produtos').classList.remove('empty');
+        document.getElementById('content-produtos').innerHTML = html;
+        document.getElementById('card-produtos').classList.add('loaded');
+      }
+
+      // Posts
+      if (b.posts) {
+        let html = '<div class="posts-list">';
+        b.posts.forEach(p => {
+          html += `<div class="post-item"><span class="post-badge">${p.formato}</span><span class="post-text">${p.ideia}</span></div>`;
+        });
+        html += '</div>';
+        document.getElementById('content-posts').classList.remove('empty');
+        document.getElementById('content-posts').innerHTML = html;
+        document.getElementById('card-posts').classList.add('loaded');
+      }
+
+      document.getElementById('footer-txt').textContent = `Briefing do dia ${b.sprint_dia} carregado · clique em Atualizar para regenerar`;
+      document.getElementById('btn-text').textContent = 'Regenerar briefing';
+
+      // Show pending warning if any
+      const totalPending = (window._pendingRodrigo.length || 0) + (window._pendingJean.length || 0);
+      if (totalPending > 0) {
+        document.getElementById('foco-area').innerHTML +=
+          `<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--gold)">
+            ⚠ ${totalPending} tarefa(s) do dia anterior ficaram pendentes — incluídas acima em destaque
+          </div>`;
+      }
+    } else {
+      // No briefing yet today — show pending notice if any
+      window._pendingRodrigo = data.pendingRodrigo || [];
+      window._pendingJean = data.pendingJean || [];
+      const total = (window._pendingRodrigo.length) + (window._pendingJean.length);
+      if (total > 0) {
+        document.getElementById('foco-area').innerHTML =
+          `<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--gold)">
+            ⚠ ${total} tarefa(s) de ontem ficaram pendentes — serão incluídas no briefing de hoje
+          </div>`;
+      }
+    }
+  } catch(e) {
+    // Silent fail — user can still generate manually
+    console.log('Could not load briefing:', e.message);
+  }
+}
+
+function renderTasksFromDB(rodrigoTasks, jeanTasks, statuses, sprintDay) {
+  const doneR = new Set(statuses.filter(s => s.socio === 'rodrigo' && s.feito).map(s => s.tarefa_idx));
+  const doneJ = new Set(statuses.filter(s => s.socio === 'jean' && s.feito).map(s => s.tarefa_idx));
+
+  const cardT = document.getElementById('content-tarefas');
+  cardT.classList.remove('empty');
+  cardT.innerHTML = `<div class="tasks-split">
+    ${renderTasksDB(rodrigoTasks, 'Rodrigo · SP', '#ff6b35', 'tr', doneR)}
+    ${renderTasksDB(jeanTasks, 'Jean · BSB', '#60a5fa', 'tj', doneJ)}
+  </div>`;
+  document.getElementById('card-tarefas').classList.add('loaded');
+}
+
+function renderTasksDB(list, label, color, prefix, doneSet) {
+  let html = `<div><div class="tasks-col-title"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color}"></span>${label}</div><ul class="task-list">`;
+  (list || []).forEach((t, i) => {
+    const pc = t.prioridade === 'alta' ? 'p-alta' : t.prioridade === 'media' ? 'p-media' : 'p-baixa';
+    const done = doneSet.has(i) ? 'done' : '';
+    const pendStyle = t.pendente ? 'border-left:2px solid var(--gold);' : '';
+    const pendLabel = t.pendente ? '<span style="font-size:9px;color:var(--gold);margin-left:4px">ontem</span>' : '';
+    html += `<li class="task-item ${done}" id="${prefix}-${i}" style="${pendStyle}" onclick="toggleTaskDB('${prefix}', ${i}, '${prefix === 'tr' ? 'rodrigo' : 'jean'}')">
+      <div class="task-check" id="chk-${prefix}-${i}">${doneSet.has(i) ? '✓' : ''}</div>
+      <span class="task-badge ${pc}">${t.prioridade}</span>
+      <span style="font-size:12px;line-height:1.5;color:#ccc">${t.tarefa}${pendLabel}</span>
+    </li>`;
+  });
+  html += `</ul></div>`;
+  return html;
+}
+
+async function toggleTaskDB(prefix, idx, socio) {
+  const item = document.getElementById(`${prefix}-${idx}`);
+  const check = document.getElementById(`chk-${prefix}-${idx}`);
+  const done = item.classList.toggle('done');
+  check.textContent = done ? '✓' : '';
+
+  // Save to Supabase
+  const today = window._today || new Date();
+  const dateStr = today.toLocaleDateString('en-CA');
+  try {
+    await fetch(`${BACKEND_URL}/api/claude?action=toggle&data_dia=${dateStr}&socio=${socio}&tarefa_idx=${idx}&feito=${done}`);
+  } catch(e) { console.log('Toggle save failed:', e); }
 }
 
 function loadingEl() {
@@ -532,7 +660,12 @@ Crie o roteiro do dia ${sprintDay} com tarefas urgentes e práticas:
     // Tarefas
     const cardT = document.getElementById('content-tarefas');
     if (tasks) {
-      cardT.innerHTML = `<div class="tasks-split">${renderTasks(tasks.rodrigo,'Rodrigo · SP','#ff6b35','tr')}${renderTasks(tasks.jean,'Jean · BSB','#60a5fa','tj')}</div>`;
+      // Add pending tasks from yesterday at the top
+      const pendR = (window._pendingRodrigo || []).map(t => ({...t, pendente: true}));
+      const pendJ = (window._pendingJean || []).map(t => ({...t, pendente: true}));
+      const allR = [...pendR, ...(tasks.rodrigo || [])];
+      const allJ = [...pendJ, ...(tasks.jean || [])];
+      cardT.innerHTML = `<div class="tasks-split">${renderTasks(allR,'Rodrigo · SP','#ff6b35','tr')}${renderTasks(allJ,'Jean · BSB','#60a5fa','tj')}</div>`;
     } else {
       cardT.innerHTML = `<span style="color:var(--muted)">Erro ao gerar tarefas. Tente novamente.</span>`;
     }
@@ -572,7 +705,29 @@ Crie o roteiro do dia ${sprintDay} com tarefas urgentes e práticas:
     }
     document.getElementById('card-posts').classList.add('loaded');
 
-    document.getElementById('footer-txt').textContent = `Atualizado às ${new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})} · ${restantes} dias restantes no sprint`;
+    const timeStr = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+    document.getElementById('footer-txt').textContent = `Gerado às ${timeStr} · salvando...`;
+
+    // Save to Supabase
+    try {
+      await fetch(BACKEND_URL + '/api/claude', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'save',
+          sprint_dia: sprintDay,
+          foco_do_dia: tasks?.foco_do_dia || '',
+          tarefas_rodrigo: tasks?.rodrigo || [],
+          tarefas_jean: tasks?.jean || [],
+          mercado: market?.mercado || '',
+          produtos: market?.produtos || [],
+          posts: market?.posts || []
+        })
+      });
+      document.getElementById('footer-txt').textContent = `Gerado às ${timeStr} · salvo · ${restantes} dias restantes`;
+    } catch(e) {
+      document.getElementById('footer-txt').textContent = `Gerado às ${timeStr} · ${restantes} dias restantes`;
+    }
 
   } catch (e) {
     let msg = e.message || 'Erro desconhecido';
